@@ -1,0 +1,32 @@
+repos:
+  - repo: https://github.com/psf/black
+    rev: 25.1.0
+    hooks:
+      - id: black
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.2.0
+    hooks:
+      - id: flake8
+
+
+  - repo: https://github.com/pre-commit/mirrors-isort
+    rev: v5.10.1
+    hooks:
+      - id: isort
+
+  - repo: local
+    hooks:
+      - id: xenon
+        name: xenon complexity check
+        entry: xenon
+        language: python
+        types: [ python ]
+        additional_dependencies: [ xenon ]
+
+      - id: mutation-testing
+        name: check mutation score
+        entry: scripts/check_mutation_threshold.py
+        language: python
+        types: [ python ]
+        additional_dependencies: [ ]

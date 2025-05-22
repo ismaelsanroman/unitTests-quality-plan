@@ -1,0 +1,64 @@
+[tool.black]
+line-length = 88
+target-version = ['py310']
+
+[tool.isort]
+profile = "black"
+line_length = 88
+multi_line_output = 3
+
+[tool.flake8]
+max-line-length = 88
+extend-ignore = "E203, W503"
+exclude = ["__pycache__", ".venv", "tests"]
+
+[tool.xenon]
+max-absolute = "B"          # Acepta solo A y B (rechaza C, D, F)
+max-modules = "B"
+max-average = "B"
+exclude = ["tests/*"]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+addopts = """
+  -ra
+  --strict-markers
+  --cov=src
+  --cov-report=term-missing
+  --cov-report=html
+"""
+markers = [
+    "unit: Unit tests rápidos.",
+    "integration: Integration tests lentos.",
+    "e2e: End-to-End tests completos."
+]
+
+[tool.coverage.run]
+branch = true
+source = ["src"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 80  # cobertura mínima aceptable
+
+[tool.cosmic-ray]
+module-path = "src"
+timeout = 30
+exclude-modules = ["tests/*"]
+test-runner = "cosmic_ray.testing.pytest.runner"
+baseline = 80  # Mutación mínima aceptable (% mutantes killed)
+
+[tool.hypothesis]
+deadline = 500  # en milisegundos
+max_examples = 100
+report_multiple_bugs = true
+
+[tool.pipenv.scripts]
+test = "pytest"
+lint = "black . && isort . && flake8"
+mutate = "cosmic-ray run && cosmic-ray report"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"

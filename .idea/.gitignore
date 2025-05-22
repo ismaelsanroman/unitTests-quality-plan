@@ -1,0 +1,31 @@
+# Default ignored files
+/shelf/
+/workspace.xml
+# Editor-based HTTP Client requests
+/httpRequests/
+# Datasource local storage ignored files
+/dataSources/
+/dataSources.local.xml
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Virtualenv
+.venv/
+
+# IDEs
+.idea/
+.vscode/
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Cosmic Ray
+cosmic-ray-report.json
