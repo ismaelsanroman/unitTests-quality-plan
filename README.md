@@ -113,8 +113,4 @@ check mutation score ........................................... Passed
 
 ## ✨ Autor
 
-Desarrollado por Ismael 🧑‍💻
-
-```yaml
-¿Quieres que también te lo convierta en una plantilla `.md` descargable o quieres que lo copie en un archivo local del repo?
-```
+Desarrollado por ***Ismael Sanromán***🧑‍💻
