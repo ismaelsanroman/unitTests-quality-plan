@@ -6,6 +6,11 @@
 # Datasource local storage ignored files
 /dataSources/
 /dataSources.local.xml
+.idea/vcs.xml
+.idea/modules.xml
+.idea/misc.xml
+UnitTest_demo.iml
+tests/.coverage
 
 # Python
 __pycache__/
@@ -26,6 +31,7 @@ build/
 .coverage
 htmlcov/
 .pytest_cache/
+.UnitTest_demo.iml
 
 # Cosmic Ray
 cosmic-ray-report.json
