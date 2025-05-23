@@ -1,10 +1,10 @@
 [tool.black]
-line-length = 88
+line-length = 90
 target-version = ['py310']
 
 [tool.isort]
 profile = "black"
-line_length = 88
+line_length = 90
 multi_line_output = 3
 
 [tool.flake8]
