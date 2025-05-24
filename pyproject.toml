@@ -1,3 +1,25 @@
+[project]
+name = "demo"
+version = "0.1.0"
+description = "Descripción breve de tu paquete"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [
+    { name = "Tu Nombre", email = "tucorreo@ejemplo.com" }
+]
+dependencies = []
+classifiers = [
+    "Programming Language :: Python :: 3.10",
+    "Operating System :: OS Independent"
+]
+
+[project.urls]
+"Source" = "https://tu.repo.git"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["demo*"]
+
 [tool.black]
 line-length = 88
 target-version = ['py310']
@@ -6,11 +28,6 @@ target-version = ['py310']
 profile = "black"
 line_length = 88
 multi_line_output = 3
-
-[tool.flake8]
-max-line-length = 88
-extend-ignore = "E203, W503"
-exclude = ["__pycache__", ".venv", "tests"]
 
 [tool.xenon]
 max-absolute = "B"          # Acepta solo A y B (rechaza C, D, F)
@@ -21,6 +38,7 @@ exclude = ["tests/*"]
 [tool.pytest.ini_options]
 minversion = "7.0"
 testpaths = ["tests"]
+pythonpath = ["src"]
 addopts = """
   -ra
   --strict-markers
@@ -31,7 +49,12 @@ addopts = """
 markers = [
     "unit: Unit tests rápidos.",
     "integration: Integration tests lentos.",
-    "e2e: End-to-End tests completos."
+    "e2e: End-to-End tests completos.",
+    "pokemon: Tests relacionados con Pokémon.",
+    "create: Test de creación",
+    "battle: Test batallas pokemon",
+    "happy_path: Test que marca el camino correcto",
+    "unhappy_path: Test que marca el camino incorrecto"
 ]
 
 [tool.coverage.run]
