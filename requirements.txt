@@ -2,6 +2,7 @@ aiohappyeyeballs==2.6.1
 aiohttp==3.11.18
 aiosignal==1.3.2
 anybadge==1.16.0
+astunparse==1.6.3
 async-timeout==5.0.1
 attrs==25.3.0
 black==25.1.0
@@ -10,10 +11,11 @@ cfgv==3.4.0
 charset-normalizer==3.4.2
 click==8.1.8
 colorama==0.4.6
-cosmic_ray==7.0.0
-coverage==7.8.1
+cosmic-ray==7.0.0
+coverage==7.8.2
 decorator==5.2.1
 distlib==0.3.9
+docopt==0.6.2
 exceptiongroup==1.3.0
 exit-codes==1.3.0
 filelock==3.18.0
@@ -36,6 +38,7 @@ mypy_extensions==1.1.0
 nodeenv==1.9.1
 packaging==25.0
 parso==0.8.4
+pathlib==1.0.1
 pathspec==0.12.1
 pbr==6.1.1
 platformdirs==4.3.8
@@ -52,6 +55,8 @@ qprompt==0.16.3
 radon==6.0.1
 requests==2.32.3
 rich==14.0.0
+setuptools==80.8.0
+six==1.17.0
 smmap==5.0.2
 sortedcontainers==2.4.0
 SQLAlchemy==2.0.41
@@ -60,6 +65,8 @@ toml==0.10.2
 tomli==2.2.1
 typing_extensions==4.13.2
 urllib3==2.4.0
+virtualenv==20.31.2
+wheel==0.45.1
 xenon==0.9.3
 yarl==1.20.0
 yattag==1.16.1

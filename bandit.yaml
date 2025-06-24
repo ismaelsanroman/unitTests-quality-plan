@@ -1,0 +1,5 @@
+exclude:
+  - tests/
+skips:
+  - B101
+  - B106

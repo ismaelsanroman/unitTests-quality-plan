@@ -35,3 +35,5 @@ htmlcov/
 
 # Cosmic Ray
 cosmic-ray-report.json
+tests/.hypothesis
+tests/.hypothesis/constants/*

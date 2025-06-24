@@ -1,32 +1,47 @@
 repos:
-  - repo: https://github.com/psf/black
-    rev: 25.1.0
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
     hooks:
-      - id: black
+      - id: check-added-large-files
+        exclude: ^libs/
 
-  - repo: https://github.com/pycqa/flake8
-    rev: 7.2.0
+  - repo: https://github.com/PyCQA/bandit
+    rev: "1.7.4"
     hooks:
-      - id: flake8
+      - id: bandit
+        entry: bandit -c -bandit.yml
 
-
-  - repo: https://github.com/pre-commit/mirrors-isort
-    rev: v5.10.1
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.3
     hooks:
-      - id: isort
+      - id: ruff
+        args: [ --fix ]
+      - id: ruff-format
+
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.2.6
+    hooks:
+      - id: codespell
+        name: codespell
+        args: [ '--ignore-words', '.codespell.ignorewords']
+        exclude: .venv
 
   - repo: local
     hooks:
-      - id: xenon
+      - id: xenon-complexity
         name: xenon complexity check
-        entry: xenon
+        entry: python -m xenon --max-absolute B --max-modules B --max-average B ./src
         language: python
         types: [ python ]
         additional_dependencies: [ xenon ]
+        pass_filenames: false
+        always_run: true
 
       - id: mutation-testing
         name: check mutation score
-        entry: scripts/check_mutation_threshold.py
-        language: python
+        entry: python scripts/mutation_check.py
+        language: system
         types: [ python ]
-        additional_dependencies: [ ]
+        exclude: logs/mutation-testing-report.json
+        pass_filenames: false
+        always_run: true
