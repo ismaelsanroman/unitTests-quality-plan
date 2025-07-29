@@ -6,7 +6,7 @@ class AtaqueInvalidoError(ValueError):
 
     def __str__(self) -> str:
         """Devuelve el mensaje de error para ataque inválido."""
-        return "El ataque debe ser mayor que cero."
+        return "Attack value must be greater than zero."
 
 
 class SaludInvalidaError(ValueError):
@@ -14,7 +14,7 @@ class SaludInvalidaError(ValueError):
 
     def __str__(self) -> str:
         """Devuelve el mensaje de error para salud inválida."""
-        return "La salud debe ser mayor que cero."
+        return "Health value must be greater than zero."
 
 
 class Pokemon:
@@ -114,7 +114,7 @@ class Pokemon:
         elif poder_self < poder_otro:
             resultado = otro_pokemon.name
         else:
-            resultado = "Empate"
+            resultado = "Draw"
 
         # Restaurar ataques originales
         self.attack = ataque_original_self

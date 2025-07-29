@@ -34,8 +34,8 @@ def test_crear_pokemon():
 @pytest.mark.parametrize(
     ("name", "attack", "health", "expected_message"),
     [
-        ("pokeprueba1", 0, 100, "ataque.*mayor que cero"),
-        ("pokeprueba2", 10, 0, "salud.*mayor que cero"),
+        ("pokeprueba1", 0, 100, "Attack.*must be greater than zero"),
+        ("pokeprueba2", 10, 0, "Health.*must be greater than zero"),
     ],
 )
 def test_crear_pokemon_parametrizado(name, attack, health, expected_message):
@@ -50,7 +50,7 @@ def test_crear_pokemon_parametrizado(name, attack, health, expected_message):
     [
         ("pikachu", "squirtle", "Pikachu"),
         ("charmander", "mew", "mew"),
-        ("bulbasaur", "bulbasaur", "Empate"),
+        ("bulbasaur", "bulbasaur", "draw"),
     ],
 )
 def test_pelea_pokemon(pokemon_ejemplo, atacante, oponente, ganador):
