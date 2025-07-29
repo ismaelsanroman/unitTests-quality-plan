@@ -1,29 +1,29 @@
 #!/usr/bin/env python
-# scripts/mutmut_check.py
 
 import logging
+import os
 import re
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-MIN_SCORE = 80  # Minimum threshold for coverage and % killed
+MIN_SCORE = 80  # Minimum threshold for mutation score (% killed)
 
 logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
 
 
 def get_executable_path(cmd: str) -> str:
-    """Finds the absolute path to an executable."""
+    """Find the absolute path to an executable."""
     exe_path = shutil.which(cmd)
     if not exe_path:
-        logging.error(f"Could not find '{cmd}' executable in PATH.")
+        logging.error(f"Executable '{cmd}' not found in PATH.")
         sys.exit(1)
     return exe_path
 
 
 def check_coverage() -> bool:
-    logging.info("🚦 [MUTATION CHECK] Checking minimum coverage before mutations...")
+    logging.info("🚦 [MUTATION CHECK] Checking minimum coverage before mutation testing...")
     try:
         pytest_path = get_executable_path("pytest")
         result = subprocess.run(
@@ -38,8 +38,7 @@ def check_coverage() -> bool:
             check=True,
         )
     except subprocess.CalledProcessError as e:
-        logging.error("❌ [MUTATION CHECK] Error running coverage")
-        # Sometimes coverage is printed in stdout
+        logging.error("❌ [MUTATION CHECK] Coverage run failed.")
         print(e.stdout or e.stderr or str(e))
         return False
 
@@ -49,44 +48,42 @@ def check_coverage() -> bool:
             try:
                 percent = float(line.strip().split()[-1].replace("%", ""))
             except Exception as ex:
-                logging.warning(f"Failed to parse coverage percent: {ex} | line: {line}")
+                logging.warning(f"Failed to parse coverage percentage: {ex} | line: {line}")
                 continue
             if percent >= MIN_SCORE:
-                logging.info("✅ [MUTATION CHECK] Coverage OK. Proceeding to mutmut!")
+                logging.info("✅ [MUTATION CHECK] Coverage is OK. Proceeding to mutation testing.")
                 return True
             logging.error(
-                f"❌ [MUTATION CHECK] Insufficient coverage: {percent:.2f}% (minimum {MIN_SCORE}%)"
+                f"❌ [MUTATION CHECK] Coverage too low: {percent:.2f}% (minimum {MIN_SCORE}%)"
             )
             return False
 
-    logging.warning("⚠️ [MUTATION CHECK] Could not extract coverage percent from pytest output.")
+    logging.warning("⚠️ [MUTATION CHECK] Could not find coverage percentage in output.")
     return False
 
 
 def run_mutmut():
-    logging.info("🧬 Running mutation tests on the source code...")
+    logging.info("🧬 Running mutation tests...")
 
-    # Avoid pytest plugins interference
-    sys.environ = getattr(sys, "environ", os.environ)
-    sys.environ["PYTEST_ADDOPTS"] = "-q -x --disable-warnings"
+    os.environ["PYTEST_ADDOPTS"] = "-q -x --disable-warnings"
 
-    # 1) Run mutmut and CAPTURE stdout to parse counters
     try:
-        mutmut_run_path = get_executable_path("mutmut")
+        mutmut_path = get_executable_path("mutmut")
         run_res = subprocess.run(
-            [mutmut_run_path, "run"],
+            [mutmut_path, "run"],
             capture_output=True,
             text=True,
-            check=True,  # mutmut returns 0 even if there are survivors
+            check=True,
         )
     except subprocess.CalledProcessError as e:
-        logging.error("❌ Error running: mutmut run")
+        logging.error("❌ Error running 'mutmut run'")
         print(e.stdout or "")
         print(e.stderr or "")
         sys.exit(1)
 
     run_out = run_res.stdout or ""
-    # 2) Get killed and survived from the final “ticker”: … 🎉 <killed> … 🙁 <survived> …
+
+    # Extract kill/survive stats
     killed = survived = None
     matches = list(re.finditer(r"(\d+)/(\d+).*?🎉\s+(\d+).*?🙁\s+(\d+)", run_out, flags=re.DOTALL))
     if matches:
@@ -97,47 +94,56 @@ def run_mutmut():
         except ValueError:
             killed = survived = None
 
-    # 3) Save the list of survivors in Markdown
-    logging.info("🧾 Generating mutation survivors report...")
+    # Write survivors report
+    logging.info("🧾 Generating survivor mutation report...")
     Path("Logs").mkdir(parents=True, exist_ok=True)
-    mutmut_results_path = get_executable_path("mutmut")
-    res_res = subprocess.run([mutmut_results_path, "results"], capture_output=True, text=True)
+    try:
+        res_res = subprocess.run(
+            [mutmut_path, "results"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except subprocess.CalledProcessError as e:
+        logging.error("❌ Error running 'mutmut results'")
+        print(e.stdout or "")
+        print(e.stderr or "")
+        sys.exit(1)
+
     results_text = res_res.stdout or ""
     with open("Logs/mutmut_survivors.md", "w", encoding="utf-8") as f:
         f.write(results_text)
 
-    # 4) If counters couldn't be extracted, at least show survivors
+    # If parsing failed, fallback to counting survivors
     if killed is None or survived is None:
-        logging.warning("⚠️ Could not extract 'mutmut run' summary.")
+        logging.warning("⚠️ Could not extract kill/survive stats.")
         surv_count = sum(1 for ln in results_text.splitlines() if ": survived" in ln)
-        logging.info(f"📊 Survivors detected: {surv_count} (cannot calculate % killed).")
+        logging.info(f"📊 Detected {surv_count} survivors (mutation score unavailable).")
         if surv_count > 0:
-            logging.error("❌ Surviving mutations detected. Pre-commit must fail.")
+            logging.error("❌ Surviving mutations found. Pre-commit will fail.")
             sys.exit(1)
-        logging.info("✅ No survivors detected.")
+        logging.info("✅ No surviving mutations.")
         sys.exit(0)
 
-    # 5) Calculate and show % killed (only with killables: killed + survived)
+    # Show mutation score
     killable = killed + survived
     killed_percent = (killed / killable) * 100 if killable > 0 else 0.0
     logging.info(
         f"📊 Mutations — Killed: {killed} | Survived: {survived} | "
-        f"% killed: {killed_percent:.2f}% (min {MIN_SCORE}%)"
+        f"Killed %: {killed_percent:.2f}% (min required: {MIN_SCORE}%)"
     )
 
-    # 6) Decide the hook result
+    # Enforce mutation score threshold
     if killed_percent < MIN_SCORE:
-        logging.error(
-            f"❌ Ratio of killed mutations ({killed_percent:.2f}%) is less than minimum ({MIN_SCORE}%)."
-        )
+        logging.error(f"❌ Mutation score too low: {killed_percent:.2f}% < {MIN_SCORE}%")
         sys.exit(1)
 
-    # Extra: if % passes but survivors remain, fail anyway (optional)
+    # Enforce 0 survivors if any
     if survived > 0:
         logging.error("❌ Mutations survived. Improve your tests.")
         sys.exit(1)
 
-    logging.info("✅ All mutations were killed. Great job!")
+    logging.info("✅ All mutations killed. Good job!")
     sys.exit(0)
 
 
