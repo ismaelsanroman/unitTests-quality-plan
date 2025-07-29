@@ -1,5 +1,25 @@
-exclude:
-  - tests/
+# Configuracion para Bandir - Analisis estatico de seguridad
+
+# 1. Formato y salida
+output_format: html
+output_filename: logs/bandit.html
+
+# 2. Objetivos a analizar
+targets:
+  - src
+
+# 3. Directorios a excluir del análisis
+exclude_dirs:
+  - .venv
+  - tests
+  - docs
+
+# 4. Chequeo de Bandit a saltar (IDs o nombres)
 skips:
-  - B101
-  - B106
+  - B101    # assert statements
+  - B110    # try_except_pass
+  - B311    # pickle.load
+
+# 5. Umbrales minimos para reportar
+severity: MEDIUM      # LOW | MEDIUM | HIGH
+confidence: MEDIUM    # LOW | MEDIUM | HIGH

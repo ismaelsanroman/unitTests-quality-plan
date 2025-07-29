@@ -37,3 +37,5 @@ htmlcov/
 cosmic-ray-report.json
 tests/.hypothesis
 tests/.hypothesis/constants/*
+/mutants
+/Logs

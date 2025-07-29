@@ -1,25 +1,25 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v5.0.0
     hooks:
       - id: check-added-large-files
         exclude: ^libs/
 
   - repo: https://github.com/PyCQA/bandit
-    rev: "1.7.4"
+    rev: "1.8.6"
     hooks:
       - id: bandit
-        entry: bandit -c -bandit.yml
+        args: [ "-c", "bandit.yaml" ]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.6.3
+    rev: v0.12.5
     hooks:
       - id: ruff
         args: [ --fix ]
       - id: ruff-format
 
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.2.6
+    rev: v2.4.1
     hooks:
       - id: codespell
         name: codespell
@@ -38,10 +38,21 @@ repos:
         always_run: true
 
       - id: mutation-testing
-        name: check mutation score
-        entry: python scripts/mutation_check.py
+        name: mutation testing (mutmut)
+        language: python
+        language_version: python3
+        additional_dependencies:
+          - mutmut==3.3.0
+          - pytest==8.3.5
+          - pytest-cov==6.2.1
+        entry: python scripts/mutmut_check.py --min-score 80
+        pass_filenames: false
+
+      - id: coverage_check
+        name: pytest coverage check
+        entry: python -m pytest --cov=src --cov-report=term-missing --cov-report=html
         language: system
         types: [ python ]
-        exclude: logs/mutation-testing-report.json
         pass_filenames: false
         always_run: true
+        verbose: true

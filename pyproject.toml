@@ -36,16 +36,15 @@ include = ["pokemon"]  # Sólo incluye el paquete 'pokemon'
 # ========================================================
 [tool.ruff]
 exclude = [
-    # Lista de carpetas y archivos a ignorar
     ".bzr", ".direnv", ".eggs", ".git", ".git-rewrite", ".hg", ".ipynb_checkpoints",
     ".mypy_cache", ".nox", ".pants.d", ".pyenv", ".pytest_cache", ".pytype",
     ".ruff_cache", ".svn", ".tox", ".venv", ".vscode", "__pypackages__", "_build",
     "buck-out", "build", "dist", "node_modules", "site-packages", "venv", "docs",
     "gunicorn_config.py", "src/utils/helpers/azure/sharepoint.py"
 ]
-line-length = 100      # Longitud máxima de línea
-indent-width = 4       # Espacios de indentación
-target-version = "py310"  # Apunta a Python 3.10 para el análisis
+line-length = 100
+indent-width = 4
+target-version = "py310"
 
 [tool.ruff.lint]
 select = [
@@ -93,6 +92,7 @@ dummy-variable-rgx = "^(_|(__[a-zA-Z0-9_]+__[a-zA-Z0-9_]*))$" # Variables dummy 
     "D101", "D102", "D103",             # docstrings en clases y métodos de test no requeridos
     "ANN001", "ANN002", "ANN003", "ANN201" # type annotations menos estrictas
 ]
+"scripts/*.py"  = ["D","T201","ANN","S603"]
 
 [tool.ruff.format]
 quote-style = "double"              # Comillas dobles por defecto
@@ -112,7 +112,6 @@ max-complexity = 10                 # Complejidad ciclomática máxima por funci
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"                # Formato de docstrings estilo numpy
-max-doc-length = 120                # Docstring máximo de 120 caracteres
 
 [tool.ruff.lint.flake8-bandit]
 check-typed-exception = true        # Verifica excepciones tipadas para seguridad
@@ -131,13 +130,8 @@ extend-immutable-calls = [
 minversion = "7.0"          # Versión mínima recomendada de pytest
 testpaths = ["tests"]       # Carpeta donde buscar tests
 pythonpath = ["src"]        # Añade src al PYTHONPATH
-addopts = """
-  -ra
-  --strict-markers
-  --cov=src
-  --cov-report=term-missing
-  --cov-report=html
-""" # Opciones por defecto: resumen, cobertura estricta y reportes
+addopts = "-ra --strict-markers"
+
 markers = [
     # Marcadores personalizados para clasificar tests
     "unit: Unit tests rápidos.",
@@ -174,17 +168,6 @@ show_missing = true        # Muestra líneas no cubiertas en el reporte
 fail_under = 80            # Falla si la cobertura baja del 80%
 
 # ========================================================
-# Cosmic Ray - Mutation Testing
-# https://cosmic-ray.readthedocs.io/
-# ========================================================
-[tool.cosmic-ray]
-module-path = "src"                # Carpeta de código a mutar
-timeout = 30                       # Tiempo máximo de test por mutación (seg)
-exclude-modules = ["tests/*"]      # No muta los tests
-test-runner = "cosmic_ray.testing.pytest.runner" # Usa pytest como runner
-baseline = 80                      # Exige mínimo 80% de supervivencia mutante
-
-# ========================================================
 # Hypothesis - Property based testing
 # https://hypothesis.readthedocs.io/
 # ========================================================
@@ -202,19 +185,6 @@ max-absolute = "B"     # Nota máxima permitida para función/módulo/paquete ('
 max-modules = "B"
 max-average = "B"
 exclude = ["tests/*"]  # No analiza tests
-
-# ========================================================
-# Pipenv scripts - Scripts personalizados con Pipenv
-# Ejecutables fácilmente desde 'pipenv run <nombre>'
-# ========================================================
-[tool.pipenv.scripts]
-test = "pytest"                                        # Ejecuta los tests
-lint = "ruff check src"                                # Linter Ruff en src
-format = "ruff format src"                             # Formateador Ruff en src
-spell = "codespell --ignore-words .codespell.ignorewords --skip=.venv" # Corrección ortográfica
-xenon = "python -m xenon --max-absolute B --max-modules B --max-average B ./src" # Chequea complejidad
-mutate = "cosmic-ray init config.toml cr_session.sqlite --force && pipenv run cosmic-ray exec config.toml cr_session.sqlite && pipenv run cosmic-ray dump cr_session.sqlite > mutation-testing-report.json"
-# Pipeline de mutation testing: inicializa, ejecuta, y exporta a JSON
 
 # ========================================================
 # Build System - Configuración del sistema de build

@@ -9,9 +9,7 @@ class Pokemon:
         "Electric": ["Water"],
     }
 
-    def __init__(
-        self, name: str, type: str = "Normal", attack: float = 1, health: float = 10
-    ):
+    def __init__(self, name: str, type: str = "Normal", attack: float = 1, health: float = 10):
         if attack <= 0:
             raise ValueError("El ataque debe ser mayor que cero.")
         if health <= 0:
@@ -33,7 +31,6 @@ class Pokemon:
         return self.attack * bonus * self.health
 
     def battle(self, otro_pokemon):
-
         print(f"\n⚔️ {self.name} vs {otro_pokemon.name}")
 
         # Guardamos ataques originales por si queremos resetear después
@@ -45,10 +42,7 @@ class Pokemon:
             bonus = random.uniform(0, 0.15)
             aumento = self.attack * bonus
             self.attack += aumento
-            print(
-                f"✨ {self.name} activa su Ataque Especial: "
-                f"+{round(aumento, 2)} de ataque"
-            )
+            print(f"✨ {self.name} activa su Ataque Especial: +{round(aumento, 2)} de ataque")
 
         # Posible ataque especial del otro
         if random.choice([True, False]):
@@ -56,8 +50,7 @@ class Pokemon:
             aumento = otro_pokemon.attack * bonus
             otro_pokemon.attack += aumento
             print(
-                f"✨ {otro_pokemon.name} activa su Ataque Especial: "
-                f"+{round(aumento, 2)} de ataque"
+                f"✨ {otro_pokemon.name} activa su Ataque Especial: +{round(aumento, 2)} de ataque"
             )
 
         # Calculamos poder con ventaja de tipo incluida
