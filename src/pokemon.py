@@ -1,77 +1,122 @@
-import random
+import secrets
+
+
+class AtaqueInvalidoError(ValueError):
+    """Excepción lanzada cuando el ataque es inválido."""
+
+    def __str__(self) -> str:
+        """Devuelve el mensaje de error para ataque inválido."""
+        return "El ataque debe ser mayor que cero."
+
+
+class SaludInvalidaError(ValueError):
+    """Excepción lanzada cuando la salud es inválida."""
+
+    def __str__(self) -> str:
+        """Devuelve el mensaje de error para salud inválida."""
+        return "La salud debe ser mayor que cero."
 
 
 class Pokemon:
-    ventajas = {
+    """Clase que representa un Pokémon con tipo, salud y ataque."""
+
+    ventajas: dict[str, list[str]] = {
         "Fire": ["Grass"],
         "Water": ["Fire"],
         "Grass": ["Water"],
         "Electric": ["Water"],
     }
 
-    def __init__(self, name: str, type: str = "Normal", attack: float = 1, health: float = 10):
+    def __init__(
+        self,
+        name: str,
+        tipo: str = "Normal",
+        attack: float = 1,
+        health: float = 10,
+    ) -> None:
+        """
+        Inicializa un nuevo Pokémon.
+
+        Args:
+            name: Nombre del Pokémon.
+            tipo: Tipo elemental.
+            attack: Poder de ataque.
+            health: Salud.
+        """
         if attack <= 0:
-            raise ValueError("El ataque debe ser mayor que cero.")
+            raise AtaqueInvalidoError()
         if health <= 0:
-            raise ValueError("La salud debe ser mayor que cero.")
+            raise SaludInvalidaError()
+        self.name: str = name
+        self.tipo: str = tipo
+        self.attack: float = attack
+        self.health: float = health
 
-        self.name = name
-        self.type = type
-        self.attack = attack
-        self.health = health
+    def __str__(self) -> str:
+        """Devuelve una representación en texto del Pokémon."""
+        return f"{self.name} ({self.tipo}, Salud: {self.health}, Ataque: {self.attack})"
 
-    def __str__(self):
-        return f"{self.name} ({self.type}, Salud: {self.health}, Ataque: {self.attack})"
+    def tiene_ventaja(self, contra_tipo: str) -> bool:
+        """
+        Indica si este Pokémon tiene ventaja de tipo sobre otro.
 
-    def tiene_ventaja(self, contra_tipo):
-        return contra_tipo in self.ventajas.get(self.type, [])
+        Args:
+            contra_tipo: Tipo del Pokémon rival.
 
-    def calcular_power_contra(self, otro_pokemon):
-        bonus = 1.5 if self.tiene_ventaja(otro_pokemon.type) else 1
+        Returns
+        -------
+            True si tiene ventaja, False en caso contrario.
+        """
+        return contra_tipo in self.ventajas.get(self.tipo, [])
+
+    def calcular_power_contra(self, otro_pokemon: "Pokemon") -> float:
+        """
+        Calcula el poder contra otro Pokémon teniendo en cuenta la ventaja de tipo.
+
+        Args:
+            otro_pokemon: El Pokémon rival.
+
+        Returns
+        -------
+            Poder total frente al rival.
+        """
+        bonus: float = 1.5 if self.tiene_ventaja(otro_pokemon.tipo) else 1.0
         return self.attack * bonus * self.health
 
-    def battle(self, otro_pokemon):
-        print(f"\n⚔️ {self.name} vs {otro_pokemon.name}")
+    def battle(self, otro_pokemon: "Pokemon") -> str:
+        """
+        Simula un combate entre dos Pokémon y devuelve el nombre del ganador o 'Empate'.
 
-        # Guardamos ataques originales por si queremos resetear después
-        ataque_original_self = self.attack
-        ataque_original_otro = otro_pokemon.attack
+        Args:
+            otro_pokemon: El Pokémon rival.
 
-        # Posible ataque especial de self
-        if random.choice([True, False]):
-            bonus = random.uniform(0, 0.15)
-            aumento = self.attack * bonus
-            self.attack += aumento
-            print(f"✨ {self.name} activa su Ataque Especial: +{round(aumento, 2)} de ataque")
+        Returns
+        -------
+            Nombre del ganador o 'Empate'.
+        """
+        ataque_original_self: float = self.attack
+        ataque_original_otro: float = otro_pokemon.attack
 
-        # Posible ataque especial del otro
-        if random.choice([True, False]):
-            bonus = random.uniform(0, 0.15)
-            aumento = otro_pokemon.attack * bonus
-            otro_pokemon.attack += aumento
-            print(
-                f"✨ {otro_pokemon.name} activa su Ataque Especial: +{round(aumento, 2)} de ataque"
-            )
+        # Ataque especial aleatorio (más seguro con secrets)
+        if secrets.choice([True, False]):
+            bonus = secrets.randbelow(15) / 100
+            self.attack += self.attack * bonus
 
-        # Calculamos poder con ventaja de tipo incluida
-        poder_self = self.calcular_power_contra(otro_pokemon)
-        poder_otro = otro_pokemon.calcular_power_contra(self)
+        if secrets.choice([True, False]):
+            bonus = secrets.randbelow(15) / 100
+            otro_pokemon.attack += otro_pokemon.attack * bonus
 
-        print(f"🧮 {self.name} - Poder total: {round(poder_self, 2)}")
-        print(f"🧮 {otro_pokemon.name} - Poder total: {round(poder_otro, 2)}")
+        poder_self: float = self.calcular_power_contra(otro_pokemon)
+        poder_otro: float = otro_pokemon.calcular_power_contra(self)
 
-        # Resultado
         if poder_self > poder_otro:
-            print(f"🏆 ¡{self.name} gana!")
-            resultado = self.name
+            resultado: str = self.name
         elif poder_self < poder_otro:
-            print(f"🏆 ¡{otro_pokemon.name} gana!")
             resultado = otro_pokemon.name
         else:
-            print("🤝 ¡Empate!")
             resultado = "Empate"
 
-        # (Opcional) Restaurar el ataque original
+        # Restaurar ataques originales
         self.attack = ataque_original_self
         otro_pokemon.attack = ataque_original_otro
 

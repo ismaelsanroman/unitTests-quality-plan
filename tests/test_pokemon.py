@@ -23,7 +23,7 @@ def pokemon_ejemplo():
 def test_crear_pokemon():
     raichu = Pokemon("Raichu", "Electric", 65, 45)
     assert raichu.name == "Raichu"
-    assert raichu.type == "Electric"
+    assert raichu.tipo == "Electric"
     assert raichu.attack == 65
     assert raichu.health == 45
 
@@ -32,7 +32,7 @@ def test_crear_pokemon():
 @pytest.mark.create
 @pytest.mark.unhappy_path
 @pytest.mark.parametrize(
-    "name, attack, health, expected_message",
+    ("name", "attack", "health", "expected_message"),
     [
         ("pokeprueba1", 0, 100, "ataque.*mayor que cero"),
         ("pokeprueba2", 10, 0, "salud.*mayor que cero"),
@@ -46,7 +46,7 @@ def test_crear_pokemon_parametrizado(name, attack, health, expected_message):
 @pytest.mark.pokemon
 @pytest.mark.battle
 @pytest.mark.parametrize(
-    "atacante, oponente, ganador",
+    ("atacante", "oponente", "ganador"),
     [
         ("pikachu", "squirtle", "Pikachu"),
         ("charmander", "mew", "mew"),
@@ -54,16 +54,17 @@ def test_crear_pokemon_parametrizado(name, attack, health, expected_message):
     ],
 )
 def test_pelea_pokemon(pokemon_ejemplo, atacante, oponente, ganador):
-    ganador = pokemon_ejemplo[atacante].battle(pokemon_ejemplo[oponente])
-    assert ganador == ganador
+    result = pokemon_ejemplo[atacante].battle(pokemon_ejemplo[oponente])
+    assert result.lower() == ganador.lower()
 
     random.seed(42)
-    ganador = pokemon_ejemplo[atacante].battle(pokemon_ejemplo[oponente])
-    assert ganador == ganador
+    result = pokemon_ejemplo[atacante].battle(pokemon_ejemplo[oponente])
+    assert result.lower() == ganador.lower()
 
 
 @pytest.mark.pokemon
 @pytest.mark.create
 @pytest.mark.happy_path
 def test_mostrar_pokemon(pokemon_ejemplo):
-    print(pokemon_ejemplo["squirtle"])
+    squirtle = pokemon_ejemplo["squirtle"]
+    assert isinstance(squirtle, Pokemon)
