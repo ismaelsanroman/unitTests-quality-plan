@@ -1,0 +1,3 @@
+[mutmut]
+paths_to_mutate=src/pokemon.py
+exclude=__init__.py

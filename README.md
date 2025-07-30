@@ -1,153 +1,142 @@
 # 🧪 UnitTest_demo
 
-Este proyecto muestra una configuración moderna, robusta y eficiente para automatizar pruebas, garantizar calidad de código y realizar análisis estáticos avanzados en Python. Incluye cobertura de pruebas, análisis de complejidad, seguridad, corrección ortográfica y pruebas de mutación (Mutation Testing).
+This project showcases a modern, robust, and efficient configuration for automating tests, ensuring code quality, and performing advanced static analysis in Python. It includes test coverage, complexity analysis, security checks, spell checking, and Mutation Testing.
 
 ---
 
-## 📂 Estructura del proyecto
+## 📂 Project Structure
 
 ```
 UnitTest_demo/
-├── .pre-commit-config.yaml       # Configuración de pre-commit para automatizar comprobaciones
-├── pyproject.toml                # Configuración centralizada de herramientas Python
-├── requirements.txt              # Dependencias del proyecto
+├── .pre-commit-config.yaml       # Pre-commit configuration for automated checks
+├── pyproject.toml                # Centralized configuration for Python tools
+├── requirements.txt              # Project dependencies
 ├── scripts/
-│   └── mutmut_check.py           # Script para ejecutar y validar Mutation Testing (mutmut)
+│   └── mutmut_check.py           # Script to run and validate Mutation Testing (mutmut)
 ├── src/
-│   └── pokemon.py                # Código fuente del proyecto
-├── tests/                        # Tests automáticos con pytest
+│   └── pokemon.py                # Project source code
+├── tests/                        # Automated tests with pytest
 ├── Logs/
-│   └── mutmut_survivors.md       # Reporte detallado de mutaciones sobrevivientes
-└── htmlcov/                      # Reporte visual de cobertura de código
-
+│   └── mutmut_survivors.md       # Detailed report of surviving mutations
+└── htmlcov/                      # Visual report of code coverage
 ```
 
 ---
 
-## 🔍 ¿Qué hace cada herramienta?
+## 🔍 What does each tool do?
 
-- **ruff**: Linter y formateador de código muy rápido que integra funcionalidades de `flake8`, `black`, `isort`, asegurando que el código cumpla estándares altos de calidad y estilo.
-- **pytest**: Framework para ejecutar tests unitarios, de integración y funcionales en Python.
-- **pytest-cov**: Complemento de pytest que mide la cobertura de código, generando reportes detallados.
-- **hypothesis**: Biblioteca que permite generar tests basados en propiedades y casos aleatorios.
-- **mutmut**: Herramienta de Mutation Testing que modifica automáticamente el código fuente para detectar debilidades en las pruebas.
-- **codespell**: Detecta y corrige automáticamente errores ortográficos comunes en el código fuente.
-- **bandit**: Herramienta para detectar problemas de seguridad en el código Python mediante análisis estático.
-- **xenon**: Analiza la complejidad ciclomática del código Python y garantiza que las funciones sean fáciles de mantener.
+- **ruff**: A fast linter and formatter that combines features from `flake8`, `black`, and `isort`, ensuring high code quality and style compliance.
+- **pytest**: A framework for running unit, integration, and functional tests in Python.
+- **pytest-cov**: A `pytest` plugin that measures code coverage and generates detailed reports.
+- **hypothesis**: A library that enables property-based and randomized testing.
+- **mutmut**: A Mutation Testing tool that automatically modifies source code to detect weaknesses in test suites.
+- **codespell**: Detects and automatically corrects common spelling errors in source code.
+- **bandit**: A tool for identifying security issues in Python code via static analysis.
+- **xenon**: Analyzes the cyclomatic complexity of Python code and ensures functions remain maintainable.
 
 ---
 
-## 🚀 Configuración inicial paso a paso
+## 🚀 Step-by-Step Initial Setup
 
-### 1. Preparar entorno virtual
+### 1. Prepare the virtual environment
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-
 ```
 
-### 2. Instalar dependencias
+### 2. Install dependencies
 
 ```bash
 pip install -r requirements.txt
-
 ```
 
-### 3. Dar permisos al script personalizado
+### 3. Make the custom script executable
 
 ```bash
 chmod +x scripts/mutmut_check.py
-
 ```
 
-### 4. Instalar `pre-commit` y hooks
+### 4. Install `pre-commit` and hooks
 
 ```bash
 pre-commit install
-
 ```
 
 ---
 
-## 🛠 Uso de herramientas (manual)
+## 🛠 Manual Tool Usage
 
-### Ejecutar pruebas con pytest
+### Run tests with pytest
 
 ```bash
 pytest
-
 ```
 
-### Generar reporte de cobertura
+### Generate coverage report
 
 ```bash
 pytest --cov=src --cov-report=term-missing --cov-report=html
-
 ```
 
-### Ejecutar Mutation Testing (mutmut)
+### Run Mutation Testing (mutmut)
 
 ```bash
 mutmut run
 mutmut results > Logs/mutmut_survivors.md
-
 ```
 
-### Validar mutaciones con script personalizado
+### Validate mutations with the custom script
 
 ```bash
 python scripts/mutmut_check.py
-
 ```
 
-### Análisis de seguridad con Bandit
+### Security analysis with Bandit
 
 ```bash
 bandit -c bandit.yaml -r src/
-
 ```
 
-### Análisis ortográfico con codespell
+### Spell check with codespell
 
 ```bash
 codespell src/
-
 ```
 
-### Complejidad ciclomática con Xenon
+### Cyclomatic complexity check with Xenon
 
 ```bash
 xenon --max-absolute B --max-modules B --max-average A src/
-
 ```
 
 ---
 
-## 🛠 Automatización con pre-commit
+## 🛠 Automation with pre-commit
 
-Pre-commit asegura automáticamente la calidad del código antes de cada commit, ejecutando:
+Pre-commit automatically enforces code quality before each commit by running:
 
-- **ruff**: Verifica el estilo, formatea el código y corrige importaciones automáticamente.
-- **pytest**: Ejecuta tests automáticos.
-- **pytest-cov**: Valida cobertura mínima del 80%.
-- **codespell**: Revisa la ortografía del código fuente.
-- **bandit**: Ejecuta análisis de seguridad.
-- **xenon**: Controla la complejidad máxima permitida.
-- **mutmut_check.py**: Ejecuta pruebas de mutación y asegura un umbral mínimo de mutaciones detectadas (80%).
+- **ruff**: Checks style, formats code, and fixes import order.
+- **pytest**: Runs automated tests.
+- **pytest-cov**: Validates a minimum coverage threshold of 80%.
+- **codespell**: Reviews source code for spelling errors.
+- **bandit**: Executes security analysis.
+- **xenon**: Enforces complexity limits.
+- **mutmut_check.py**: Executes mutation tests and ensures a minimum detection threshold of 80%.
 
-Para ejecutar manualmente todos los hooks:
+To manually trigger all hooks:
 
 ```bash
 pre-commit run --all-files
-
 ```
 
 ---
 
-## ✅ Estado esperado del pre-commit
+## ✅ Expected pre-commit Output
 
 ```
+graphql
+CopiarEditar
 ruff............................................................ Passed
 pytest.......................................................... Passed
 coverage_check.................................................. Passed
@@ -155,24 +144,23 @@ codespell....................................................... Passed
 bandit security check........................................... Passed
 xenon complexity check.......................................... Passed
 mutation testing (mutmut)....................................... Passed
-
 ```
 
 ---
 
-## 📜 Reportes y registros generados
+## 📜 Generated Reports and Logs
 
-- **Logs/mutmut_survivors.md**: Contiene mutaciones que sobrevivieron indicando posibles fallos en las pruebas.
-- **htmlcov/**: Reporte visual interactivo de la cobertura de código generada por pytest-cov.
-
----
-
-## ⚙️ Configuración centralizada (`pyproject.toml`)
-
-Todas las herramientas y dependencias del proyecto se configuran de forma centralizada en el archivo `pyproject.toml`, facilitando mantenimiento y lectura sencilla.
+- **Logs/mutmut_survivors.md**: Contains surviving mutations, indicating potential weaknesses in the test suite.
+- **htmlcov/**: Interactive visual report of code coverage generated by `pytest-cov`.
 
 ---
 
-## ✨ Autor
+## ⚙️ Centralized Configuration (`pyproject.toml`)
 
-Desarrollado por **Ismael Sanromán** 🧑‍💻
+All tools and dependencies are centrally configured in the `pyproject.toml` file, making maintenance and readability much easier.
+
+---
+
+## ✨ Author
+
+Developed by **Ismael Sanromán** 🧑‍💻

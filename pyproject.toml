@@ -1,37 +1,37 @@
 # ========================================================
-# [project] METADATOS de tu proyecto Python
+# [project] Python Project METADATA
 # Project metadata block
 # Define general info for packaging, publishing, and documentation tools.
 # ========================================================
 [project]
-name = "demo"  # Nombre del proyecto / Project name
-version = "0.1.0"  # Versión inicial / Initial version
-description = "Demo sobre pruebas unitarias"  # Breve descripción / Short description
-readme = "README.md"  # Archivo README incluido / Main README file
-requires-python = ">=3.9"  # Versión mínima de Python requerida / Minimum Python version required
+name = "demo"  # Project name
+version = "0.1.0"  # Initial version
+description = "Demo about unit testing"  # Short description
+readme = "README.md"  # Main README file
+requires-python = ">=3.9"  # Minimum Python version required
 authors = [
-    { name = "Ismael Sanroman", email = "ismaelsanromansanchez@gmail.com" }  # Autor y email
+    { name = "Ismael Sanroman", email = "ismaelsanromansanchez@gmail.com" }  # Author and email
 ]
-dependencies = []  # Dependencias necesarias para funcionar / Dependencies (empty here)
+dependencies = []  # Dependencies (empty here)
 classifiers = [
-    "Programming Language :: Python :: 3.9",  # Compatible con Python 3.9
-    "Operating System :: OS Independent"       # Sistema operativo indiferente
+    "Programming Language :: Python :: 3.9",  # Compatible with Python 3.9
+    "Operating System :: OS Independent"       # OS Independent
 ]
 
 [project.urls]
-"Source" = "https://github.com/ismaelsanroman/UnitTest_demo"  # Enlace al repo
+"Source" = "https://github.com/ismaelsanroman/UnitTest_demo"  # Repository link
 
 # ---------------------------------------------
 # SETUPTOOLS
-# Define cómo y dónde buscar los paquetes a incluir en el build
+# Defines how and where to look for packages to include in the build
 # ---------------------------------------------
 [tool.setuptools.packages.find]
-where = ["src"]      # Carpeta raíz donde buscar módulos
-include = ["pokemon"]  # Sólo incluye el paquete 'pokemon'
+where = ["src"]      # Root folder to search for modules
+include = ["pokemon"]  # Only include the 'pokemon' package
 
 # ========================================================
-# Configuración de RUFF
-# Linter y formateador ultrarrápido para Python
+# RUFF Configuration
+# Ultra-fast linter and formatter for Python
 # https://docs.astral.sh/ruff/
 # ========================================================
 [tool.ruff]
@@ -48,148 +48,119 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = [
-    # 🔍 Activamos familias de reglas específicas para analizar el código.
-    # Estas cubren desde estilo, errores comunes, seguridad, hasta buenas prácticas modernas.
-
-    "A",     # Builtins: evita redefinir funciones internas como `list`, `str`, `open`, etc.
-    "B",     # Bugbear: detecta errores sutiles y malas prácticas comunes en Python.
-    "C",     # Complejidad (McCabe): controla funciones con demasiadas bifurcaciones lógicas.
-    "D",     # Docstrings: fuerza a documentar clases, funciones y módulos correctamente.
-    "E",     # Pycodestyle (errores): reglas clásicas de estilo (espaciado, indentación...).
-    "F",     # Pyflakes: detecta código muerto, variables no usadas o mal referenciadas.
-    "I",     # Isort: organiza y agrupa los `import` según convención.
-    "N",     # Naming (PEP8): asegura que nombres sigan las convenciones (snake_case, CamelCase...).
-    "S",     # Seguridad (Bandit): analiza vulnerabilidades comunes (eval, subprocess inseguro...).
-    "T",     # Print: prohíbe `print()` en código de producción (mejor usar logging).
-    "Q",     # ❝ Comillas: unifica uso de comillas simples o dobles según configuración.
-    "W",     # Pycodestyle (warnings): advertencias leves pero útiles para mantener calidad.
-    "ANN",   # Anotaciones de tipo: requiere `type hints` en funciones, clases, parámetros...
-    "COM",   # Comas: controla estilo de comas en listas, diccionarios y tuplas multilinea.
-    "TRY",   # Try/Except: buenas prácticas en manejo de excepciones (por ejemplo, evitar `except:`).
-    "PTH",   # Pathlib: fomenta el uso de `pathlib.Path` en vez de `os.path` (más moderno y robusto).
-    "RET",   # Return: coherencia en `return` (por ejemplo, no devolver algo en unas ramas y `None` en otras).
-    "TD",    # TODOs: detecta comentarios `TO.DO` como tareas pendientes visibles.
-    "ERA",   # Código muerto: detecta código comentado o inalcanzable que debe eliminarse.
-    "PT"     # Pytest: asegura buenas prácticas específicas de `pytest` (fixtures, asserts, etc.).
+    "A", "B", "C", "D", "E", "F", "I", "N", "S", "T", "Q", "W", "ANN", "COM", "TRY", "PTH", "RET", "TD", "ERA", "PT"
 ]
 ignore = [
-    # Reglas ignoradas por motivos prácticos o de estilo
-    "E203", "F403",                         # Por compatibilidad con black, imports con '*'
-    "ANN101", "ANN102", "ANN204", "ANN401", # Type hints no requeridos en todos los casos
-    "D100", "D104", "D202", "D203",         # Docstring flexibilidad
-    "TRY400",                               # Excepciones
-    "PTH123",                               # Pathlib opcional
-    "COM812"                                # Comas al final de lista (estilo black)
+    "E203", "F403",                          # For compatibility with black, wildcard imports
+    "ANN101", "ANN102", "ANN204", "ANN401", # Type hints not always required
+    "D100", "D104", "D202", "D203",         # Docstring flexibility
+    "TRY400",                                # Exception flexibility
+    "PTH123",                                # Optional Pathlib usage
+    "COM812"                                 # Trailing commas (black style)
 ]
-fixable = ["ALL"]       # Permite autocorrecciones de to.do tipo
-unfixable = []          # Nada marcado como no autocorregible
-dummy-variable-rgx = "^(_|(__[a-zA-Z0-9_]+__[a-zA-Z0-9_]*))$" # Variables dummy (ej: _)
+fixable = ["ALL"]       # Allows auto-fix for all
+unfixable = []          # No non-fixable rules defined
+dummy-variable-rgx = "^(_|(__[a-zA-Z0-9_]+__[a-zA-Z0-9_]*))$"
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = [
-    # En tests se ignoran algunas reglas para mayor flexibilidad
-    "S101",                             # assert statements permitidos
-    "D101", "D102", "D103",             # docstrings en clases y métodos de test no requeridos
-    "ANN001", "ANN002", "ANN003", "ANN201" # type annotations menos estrictas
+    "S101", "D101", "D102", "D103", "ANN001", "ANN002", "ANN003", "ANN201"
 ]
-"scripts/*.py"  = ["D","T201","ANN","S603"]
+"scripts/*.py"  = ["D", "T201", "ANN", "S603"]
 
 [tool.ruff.format]
-quote-style = "double"              # Comillas dobles por defecto
-indent-style = "space"              # Indentación por espacios
-skip-magic-trailing-comma = false   # Mantener comas mágicas
-line-ending = "auto"                # Final de línea automático
-docstring-code-format = true        # Formatea el código dentro de docstrings
-docstring-code-line-length = "dynamic"  # Longitud de línea en docstring ajustable
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = true
+docstring-code-line-length = "dynamic"
 
 [tool.ruff.lint.isort]
-split-on-trailing-comma = true      # Separar imports con coma final
-force-wrap-aliases = true           # Forzar wrap de alias de imports
-combine-as-imports = true           # Combina imports con 'as'
+split-on-trailing-comma = true
+force-wrap-aliases = true
+combine-as-imports = true
 
 [tool.ruff.lint.mccabe]
-max-complexity = 10                 # Complejidad ciclomática máxima por función
+max-complexity = 10
 
 [tool.ruff.lint.pydocstyle]
-convention = "numpy"                # Formato de docstrings estilo numpy
+convention = "numpy"
 
 [tool.ruff.lint.flake8-bandit]
-check-typed-exception = true        # Verifica excepciones tipadas para seguridad
+check-typed-exception = true
 
 [tool.ruff.lint.flake8-bugbear]
 extend-immutable-calls = [
-    # Extiende análisis a decoradores de FastAPI
     "fastapi.Depends", "fastapi.params.Depends",
     "fastapi.Query", "fastapi.params.Query"
 ]
 
 # ========================================================
-# Pytest - Configuración del runner de tests
+# Pytest - Test runner configuration
 # ========================================================
 [tool.pytest.ini_options]
-minversion = "7.0"          # Versión mínima recomendada de pytest
-testpaths = ["tests"]       # Carpeta donde buscar tests
-pythonpath = ["src"]        # Añade src al PYTHONPATH
+minversion = "7.0"
+testpaths = ["tests"]
+pythonpath = ["src"]
 addopts = "-ra --strict-markers"
 
 markers = [
-    # Marcadores personalizados para clasificar tests
-    "unit: Unit tests rápidos.",
-    "integration: Integration tests lentos.",
-    "e2e: End-to-End tests completos.",
-    "pokemon: Tests relacionados con Pokémon.",
-    "create: Test de creación",
-    "battle: Test batallas pokemon",
-    "happy_path: Test que marca el camino correcto",
-    "unhappy_path: Test que marca el camino incorrecto",
+    "unit: Fast unit tests.",
+    "integration: Slow integration tests.",
+    "e2e: Complete end-to-end tests.",
+    "pokemon: Tests related to Pokémon.",
+    "create: Creation tests",
+    "battle: Pokémon battle tests",
+    "happy_path: Tests for correct paths",
+    "unhappy_path: Tests for incorrect paths",
     "functional: Functional tests.",
-    "exception_handling: Tests de excepciones.",
-    "ports: Tests de puertos.",
-    "agents: Tests de agentes.",
-    "utils: Tests de utilidades.",
-    "process: Tests de procesos.",
-    "performance: Tests de rendimiento.",
-    "regression: Tests de regresión.",
+    "exception_handling: Exception handling tests.",
+    "ports: Port tests.",
+    "agents: Agent tests.",
+    "utils: Utility tests.",
+    "process: Process tests.",
+    "performance: Performance tests.",
+    "regression: Regression tests.",
     "smoke: Smoke tests.",
-    "slow: Tests lentos.",
-    "db: Tests de base de datos."
+    "slow: Slow tests.",
+    "db: Database tests."
 ]
 
 # ========================================================
-# Coverage - Cobertura de código
+# Coverage - Code coverage configuration
 # https://coverage.readthedocs.io/
 # ========================================================
 [tool.coverage.run]
-branch = true              # Medición de cobertura por ramas (mayor precisión)
-source = ["src"]           # Solo mide cobertura sobre src
+branch = true
+source = ["src"]
 
 [tool.coverage.report]
-show_missing = true        # Muestra líneas no cubiertas en el reporte
-fail_under = 80            # Falla si la cobertura baja del 80%
+show_missing = true
+fail_under = 80
 
 # ========================================================
 # Hypothesis - Property based testing
 # https://hypothesis.readthedocs.io/
 # ========================================================
 [tool.hypothesis]
-deadline = 500           # Máximo 500ms por test
-max_examples = 100       # Máximo 100 ejemplos generados por test
-report_multiple_bugs = true  # Reporta todos los fallos en vez de parar en el primero
+deadline = 500
+max_examples = 100
+report_multiple_bugs = true
 
 # ========================================================
-# Xenon - Complejidad ciclomática
+# Xenon - Cyclomatic complexity analysis
 # https://xenon.readthedocs.io/
 # ========================================================
 [tool.xenon]
-max-absolute = "B"     # Nota máxima permitida para función/módulo/paquete ('A' es mejor que 'B')
+max-absolute = "B"
 max-modules = "B"
 max-average = "B"
-exclude = ["tests/*"]  # No analiza tests
+exclude = ["tests/*"]
 
 # ========================================================
-# Build System - Configuración del sistema de build
+# Build System - Build system configuration
 # ========================================================
 [build-system]
-requires = ["setuptools>=61.0"]  # setuptools moderno requerido
-build-backend = "setuptools.build_meta"  # Backend estándar para build
-
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
