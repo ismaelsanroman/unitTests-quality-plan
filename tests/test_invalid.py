@@ -25,38 +25,72 @@ def get_executable_path(cmd: str) -> str:
     return exe_path
 
 
-def build_env_with_resource_shim_if_needed() -> dict:
+def build_env_shims_for_windows() -> dict:
     """
-    En Windows, mutmut importa 'resource' (módulo POSIX).
-    Creamos un shim no-op y lo añadimos al PYTHONPATH para evitar el ImportError.
+    En Windows, mutmut:
+      - importa 'resource' (solo POSIX)
+      - intenta usar multiprocessing con 'fork'
+    Inyectamos:
+      - resource.py (no-op)
+      - sitecustomize.py que fuerza 'spawn' y neutraliza 'fork'
     """
     env = os.environ.copy()
 
     if sys.platform.startswith("win"):
         shim_dir = Path(tempfile.mkdtemp(prefix="mutmut-win-shim-"))
+
+        # 1) Shim de 'resource'
         (shim_dir / "resource.py").write_text(
             dedent(
                 """
                 # resource.py — shim no-op para Windows
-                # Define lo mínimo que mutmut podría tocar en POSIX.
                 RLIMIT_AS = 9
                 RLIMIT_DATA = 2
                 RLIMIT_STACK = 3
-
-                def getrlimit(_):
-                    # devuelve tupla (soft, hard) sin límite
-                    return (2**63 - 1, 2**63 - 1)
-
-                def setrlimit(_, __):
-                    # en Windows no hacemos nada
-                    return None
+                def getrlimit(_): return (2**63 - 1, 2**63 - 1)
+                def setrlimit(_, __): return None
                 """
             ).lstrip(),
             encoding="utf-8",
         )
-        # Prependemos el shim al PYTHONPATH
+
+        # 2) sitecustomize: se importa automáticamente al arrancar Python
+        #    Aquí forzamos 'spawn' y hacemos que cualquier intento de setear 'fork' sea un no-op.
+        (shim_dir / "sitecustomize.py").write_text(
+            dedent(
+                """
+                # sitecustomize.py — ajustes tempranos para que mutmut funcione en Windows
+                try:
+                    import multiprocessing as _mp
+                    # Fuerza 'spawn' desde el arranque
+                    try:
+                        _mp.set_start_method('spawn', force=True)
+                    except Exception:
+                        pass
+
+                    _orig_set = _mp.set_start_method
+
+                    def _safe_set(method, *args, **kwargs):
+                        # Si alguien pide 'fork', lo ignoramos (Windows no lo soporta)
+                        if method == 'fork':
+                            return None
+                        try:
+                            return _orig_set(method, *args, **kwargs)
+                        except Exception:
+                            return None
+
+                    _mp.set_start_method = _safe_set
+                except Exception:
+                    # Si algo falla aquí, seguimos sin romper el proceso.
+                    pass
+                """
+            ).lstrip(),
+            encoding="utf-8",
+        )
+
+        # Prependemos el shim al PYTHONPATH para que Python lo cargue primero
         env["PYTHONPATH"] = f"{shim_dir}{os.pathsep}{env.get('PYTHONPATH', '')}"
-        logging.info("🧩 Windows detectado: inyectado shim 'resource' no-op para mutmut.")
+        logging.info("🧩 Windows detectado: inyectados shims 'resource' y 'sitecustomize' (spawn).")
 
     return env
 
@@ -191,8 +225,8 @@ def run_mutmut(env: dict):
 
 
 if __name__ == "__main__":
-    # Prepara entorno (inyecta shim en Windows si hace falta)
-    _env = build_env_with_resource_shim_if_needed()
+    # Prepara entorno (shims para Windows si hace falta)
+    _env = build_env_shims_for_windows()
 
     if not check_coverage(_env):
         sys.exit(1)
