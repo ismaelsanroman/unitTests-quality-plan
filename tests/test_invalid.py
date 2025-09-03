@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 import logging
 import os
@@ -6,7 +7,9 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
+from textwrap import dedent
 
 MIN_SCORE = 80  # Minimum threshold for mutation score (% killed)
 
@@ -22,7 +25,43 @@ def get_executable_path(cmd: str) -> str:
     return exe_path
 
 
-def check_coverage() -> bool:
+def build_env_with_resource_shim_if_needed() -> dict:
+    """
+    En Windows, mutmut importa 'resource' (módulo POSIX).
+    Creamos un shim no-op y lo añadimos al PYTHONPATH para evitar el ImportError.
+    """
+    env = os.environ.copy()
+
+    if sys.platform.startswith("win"):
+        shim_dir = Path(tempfile.mkdtemp(prefix="mutmut-win-shim-"))
+        (shim_dir / "resource.py").write_text(
+            dedent(
+                """
+                # resource.py — shim no-op para Windows
+                # Define lo mínimo que mutmut podría tocar en POSIX.
+                RLIMIT_AS = 9
+                RLIMIT_DATA = 2
+                RLIMIT_STACK = 3
+
+                def getrlimit(_):
+                    # devuelve tupla (soft, hard) sin límite
+                    return (2**63 - 1, 2**63 - 1)
+
+                def setrlimit(_, __):
+                    # en Windows no hacemos nada
+                    return None
+                """
+            ).lstrip(),
+            encoding="utf-8",
+        )
+        # Prependemos el shim al PYTHONPATH
+        env["PYTHONPATH"] = f"{shim_dir}{os.pathsep}{env.get('PYTHONPATH', '')}"
+        logging.info("🧩 Windows detectado: inyectado shim 'resource' no-op para mutmut.")
+
+    return env
+
+
+def check_coverage(env: dict) -> bool:
     logging.info("🚦 [MUTATION CHECK] Checking minimum coverage before mutation testing...")
     try:
         pytest_path = get_executable_path("pytest")
@@ -36,6 +75,7 @@ def check_coverage() -> bool:
             capture_output=True,
             text=True,
             check=True,
+            env=env,
         )
     except subprocess.CalledProcessError as e:
         logging.error("❌ [MUTATION CHECK] Coverage run failed.")
@@ -62,10 +102,12 @@ def check_coverage() -> bool:
     return False
 
 
-def run_mutmut():
+def run_mutmut(env: dict):
     logging.info("🧬 Running mutation tests...")
 
-    os.environ["PYTEST_ADDOPTS"] = "-q -x --disable-warnings"
+    # Opciones útiles para pytest durante mutmut
+    env = env.copy()
+    env["PYTEST_ADDOPTS"] = "-q -x --disable-warnings"
 
     try:
         mutmut_path = get_executable_path("mutmut")
@@ -74,6 +116,7 @@ def run_mutmut():
             capture_output=True,
             text=True,
             check=True,
+            env=env,
         )
     except subprocess.CalledProcessError as e:
         logging.error("❌ Error running 'mutmut run'")
@@ -83,7 +126,7 @@ def run_mutmut():
 
     run_out = run_res.stdout or ""
 
-    # Extract kill/survive stats
+    # Extrae estadísticas de killed/survived si están en la salida
     killed = survived = None
     matches = list(re.finditer(r"(\d+)/(\d+).*?🎉\s+(\d+).*?🙁\s+(\d+)", run_out, flags=re.DOTALL))
     if matches:
@@ -94,7 +137,7 @@ def run_mutmut():
         except ValueError:
             killed = survived = None
 
-    # Write survivors report
+    # Genera informe de survivors
     logging.info("🧾 Generating survivor mutation report...")
     Path("Logs").mkdir(parents=True, exist_ok=True)
     try:
@@ -103,6 +146,7 @@ def run_mutmut():
             capture_output=True,
             text=True,
             check=True,
+            env=env,
         )
     except subprocess.CalledProcessError as e:
         logging.error("❌ Error running 'mutmut results'")
@@ -114,7 +158,7 @@ def run_mutmut():
     with open("Logs/mutmut_survivors.md", "w", encoding="utf-8") as f:
         f.write(results_text)
 
-    # If parsing failed, fallback to counting survivors
+    # Si no pudimos parsear, contamos survivors por texto
     if killed is None or survived is None:
         logging.warning("⚠️ Could not extract kill/survive stats.")
         surv_count = sum(1 for ln in results_text.splitlines() if ": survived" in ln)
@@ -125,7 +169,7 @@ def run_mutmut():
         logging.info("✅ No surviving mutations.")
         sys.exit(0)
 
-    # Show mutation score
+    # Muestra mutation score
     killable = killed + survived
     killed_percent = (killed / killable) * 100 if killable > 0 else 0.0
     logging.info(
@@ -133,12 +177,12 @@ def run_mutmut():
         f"Killed %: {killed_percent:.2f}% (min required: {MIN_SCORE}%)"
     )
 
-    # Enforce mutation score threshold
+    # Enforce threshold
     if killed_percent < MIN_SCORE:
         logging.error(f"❌ Mutation score too low: {killed_percent:.2f}% < {MIN_SCORE}%")
         sys.exit(1)
 
-    # Enforce 0 survivors if any
+    # Aviso si hay survivors pero pasó el umbral
     if survived > 0:
         logging.warning("⚠️ Some mutations survived, but score threshold passed.")
 
@@ -147,6 +191,9 @@ def run_mutmut():
 
 
 if __name__ == "__main__":
-    if not check_coverage():
+    # Prepara entorno (inyecta shim en Windows si hace falta)
+    _env = build_env_with_resource_shim_if_needed()
+
+    if not check_coverage(_env):
         sys.exit(1)
-    run_mutmut()
+    run_mutmut(_env)
