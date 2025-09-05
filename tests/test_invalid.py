@@ -3,9 +3,11 @@
 """
 Windows-friendly mutation gate using `mutatest` (CLI) and `pytest`.
 - Runs coverage first and enforces a minimum threshold.
-- Then runs `mutatest` via its **console script** (not as a module) and parses results.
+- Then runs `mutatest` via its console script and parses results.
 - Reads thresholds from env vars when provided: COVERAGE_MIN, MUTATION_MIN.
-- Disables pytest plugin autoloading to avoid breakage from old third‑party plugins.
+- Disables pytest plugin autoloading for the coverage phase to avoid breakage from old plugins.
+- Ensures the mutatest clean trial uses a minimal pytest config (no coverage flags),
+  so baseline tests run even if `pytest.ini` includes coverage addopts.
 
 Comments are in English and there are no emojis by request.
 """
@@ -47,6 +49,8 @@ def _which(cmd: str) -> str:
         sys.exit(1)
     return path
 
+
+# ---- Coverage phase -------------------------------------------------------
 
 def run_pytest_coverage() -> Optional[float]:
     """Run pytest with coverage and return total coverage percentage if found."""
@@ -104,19 +108,46 @@ def enforce_min_coverage(min_required: float) -> bool:
     return False
 
 
+# ---- Mutation phase -------------------------------------------------------
+
+def _prepare_minimal_pytest_config() -> Path:
+    """Create a minimal pytest config to avoid inheriting --cov addopts from pytest.ini.
+
+    Some projects define coverage flags in pytest.ini (addopts). When mutatest runs the
+    baseline "clean trial", those flags can break if pytest-cov is not loaded. This function
+    writes a temporary config that sets a safe addopts and returns its path.
+    """
+    cfg_dir = Path("Logs")
+    cfg_dir.mkdir(parents=True, exist_ok=True)
+    cfg_path = cfg_dir / "pytest_mutatest.ini"
+    cfg_path.write_text("[pytest]\naddopts = -q -x\n", encoding="utf-8")
+    return cfg_path
+
+
 def run_mutatest() -> Tuple[str, int]:
     """Run mutatest via its console script and return (stdout+stderr, returncode)."""
     logging.info("[MUTATION] Running mutatest...")
 
     source_dir = os.environ.get("MUTATION_SOURCE", "src")
 
-    # Keep pytest quiet and fail fast; also isolate plugins for the pytests that mutatest spawns.
+    # Keep pytest quiet and fail fast for test runs spawned by mutatest.
     os.environ["PYTEST_ADDOPTS"] = "-q -x --disable-warnings"
-    os.environ["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
 
-    mutatest_exe = _which("mutatest")  # use console script; do NOT run as module
+    cfg_path = _prepare_minimal_pytest_config()
 
-    cmd = [mutatest_exe, "-s", source_dir]
+    mutatest_exe = _which("mutatest")  # console script
+
+    # Force mutatest to use our pytest command with the minimal config.
+    # On Windows paths with spaces must be quoted.
+    pytest_cmd = f"pytest -c \"{cfg_path}\""
+
+    cmd = [
+        mutatest_exe,
+        "-s",
+        source_dir,
+        "--testcmds",
+        pytest_cmd,
+    ]
 
     res = subprocess.run(cmd, capture_output=True, text=True)
     stdout = (res.stdout or "") + ("\n" + res.stderr if res.stderr else "")
@@ -165,6 +196,12 @@ def write_survivors_report(output: str) -> int:
 
 def enforce_mutation_score(min_required: float) -> None:
     stdout, _ = run_mutatest()
+
+    # If the clean trial failed, abort with a clear error so CI does not give false positives.
+    if re.search(r"(?i)Clean trial does not pass", stdout):
+        logging.error("[MUTATION] Clean trial failed; mutation testing aborted. Fix failing baseline tests.")
+        print(stdout)
+        sys.exit(1)
 
     killed, survived = parse_mutatest_stats(stdout)
     survivors_detected = write_survivors_report(stdout)
