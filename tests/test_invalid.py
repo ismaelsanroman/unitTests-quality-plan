@@ -1,19 +1,11 @@
 #!/usr/bin/env python
 
 """
-Mutation test gate for Windows using `mutatest` and `pytest`.
-- Runs coverage first (via pytest + coverage) and enforces a minimum threshold.
-- Then runs `mutatest` and parses results to compute a mutation score.
-- Fails the process (exit code 1) if the mutation score is below MIN_SCORE or if there are survivors
-  when score parsing is unavailable but survivors are detected in the textual output.
-
-Notes for Windows compatibility:
-- Executables are invoked as Python modules using `sys.executable -m <module>` to avoid PATH issues.
-- All file writes go under a local `Logs/` folder.
-- Output parsing is resilient to small format changes; if exact numbers cannot be parsed, it falls back
-  to detecting "SURVIVED" lines and failing accordingly.
-- Plugin isolation: set `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1` so third‑party plugins (e.g., very old
-  hypothesis plugins that pin `coverage<6`) cannot break the run. We explicitly load `pytest-cov`.
+Windows-friendly mutation gate using `mutatest` (CLI) and `pytest`.
+- Runs coverage first and enforces a minimum threshold.
+- Then runs `mutatest` via its **console script** (not as a module) and parses results.
+- Reads thresholds from env vars when provided: COVERAGE_MIN, MUTATION_MIN.
+- Disables pytest plugin autoloading to avoid breakage from old third‑party plugins.
 
 Comments are in English and there are no emojis by request.
 """
@@ -21,28 +13,46 @@ Comments are in English and there are no emojis by request.
 import logging
 import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 from typing import Optional, Tuple
 
-# Threshold used both for coverage minimum and mutation score minimum (%).
-MIN_SCORE = 80
+DEFAULT_MIN = 80.0  # default threshold for coverage and mutation score
 
 logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
 
 
-def run_pytest_coverage() -> Optional[float]:
-    """Run pytest with coverage and return the total coverage percentage if found.
+def _get_thresholds() -> Tuple[float, float]:
+    """Return (coverage_min, mutation_min) from env or defaults."""
+    def _read(name: str, default: float) -> float:
+        v = os.environ.get(name)
+        if v is None:
+            return default
+        try:
+            return float(v)
+        except ValueError:
+            logging.warning(f"[CONFIG] Invalid {name}={v!r}; using default {default}.")
+            return default
 
-    Returns
-    -------
-    Optional[float]
-        The coverage percentage (0-100) if parsed successfully, otherwise None.
-    """
+    return _read("COVERAGE_MIN", DEFAULT_MIN), _read("MUTATION_MIN", DEFAULT_MIN)
+
+
+def _which(cmd: str) -> str:
+    """Find an executable on PATH or abort with a clear message."""
+    path = shutil.which(cmd)
+    if not path:
+        logging.error(f"Executable '{cmd}' not found on PATH. Ensure it is installed in this environment.")
+        sys.exit(1)
+    return path
+
+
+def run_pytest_coverage() -> Optional[float]:
+    """Run pytest with coverage and return total coverage percentage if found."""
     logging.info("[COVERAGE] Running pytest with coverage...")
 
-    # Isolate from third-party plugins that could be incompatible.
+    # Isolate from third‑party plugins that may be incompatible.
     os.environ["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
 
     cmd = [
@@ -57,12 +67,7 @@ def run_pytest_coverage() -> Optional[float]:
     ]
 
     try:
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            check=True,
-        )
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
     except subprocess.CalledProcessError as e:
         logging.error("[COVERAGE] Pytest coverage run failed.")
         print(e.stdout or e.stderr or str(e))
@@ -87,63 +92,33 @@ def run_pytest_coverage() -> Optional[float]:
 
 
 def enforce_min_coverage(min_required: float) -> bool:
-    """Run coverage and enforce the minimum threshold.
-
-    Returns True if coverage is OK, False otherwise.
-    """
     percent = run_pytest_coverage()
     if percent is None:
         logging.error("[COVERAGE] Coverage not detected; failing the gate.")
         return False
-
+    logging.info(f"[COVERAGE] Using threshold: {min_required:.2f}%")
     if percent >= min_required:
         logging.info("[COVERAGE] Coverage threshold met. Proceeding to mutation testing.")
         return True
-
-    logging.error(
-        f"[COVERAGE] Coverage too low: {percent:.2f}% (minimum {min_required}%)."
-    )
+    logging.error(f"[COVERAGE] Coverage too low: {percent:.2f}% (minimum {min_required}%).")
     return False
 
 
 def run_mutatest() -> Tuple[str, int]:
-    """Run mutatest and return its stdout plus return code.
-
-    Returns
-    -------
-    Tuple[str, int]
-        The captured stdout and the process return code.
-    """
+    """Run mutatest via its console script and return (stdout+stderr, returncode)."""
     logging.info("[MUTATION] Running mutatest...")
 
-    # Allow override of source directory via environment variable.
     source_dir = os.environ.get("MUTATION_SOURCE", "src")
 
-    # Keep pytest quiet and fail fast, and isolate from third-party plugins.
+    # Keep pytest quiet and fail fast; also isolate plugins for the pytests that mutatest spawns.
     os.environ["PYTEST_ADDOPTS"] = "-q -x --disable-warnings"
     os.environ["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
 
-    cmd = [
-        sys.executable,
-        "-m",
-        "mutatest",
-        "-s",
-        source_dir,
-    ]
+    mutatest_exe = _which("mutatest")  # use console script; do NOT run as module
 
-    try:
-        res = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-    except FileNotFoundError:
-        logging.error(
-            "[MUTATION] mutatest is not installed or not importable. Install with `pip install mutatest`."
-        )
-        sys.exit(1)
+    cmd = [mutatest_exe, "-s", source_dir]
 
+    res = subprocess.run(cmd, capture_output=True, text=True)
     stdout = (res.stdout or "") + ("\n" + res.stderr if res.stderr else "")
 
     Path("Logs").mkdir(parents=True, exist_ok=True)
@@ -153,22 +128,14 @@ def run_mutatest() -> Tuple[str, int]:
 
 
 def parse_mutatest_stats(output: str) -> Tuple[Optional[int], Optional[int]]:
-    """Attempt to extract killed and survived counts from mutatest output.
-
-    Returns (killed, survived) as integers, or (None, None) if parsing failed.
-    """
+    """Extract (killed, survived) from mutatest output when possible."""
     text = output
-
-    killed = None
-    survived = None
 
     m_k = re.search(r"(?mi)^\s*KILLED\s*[:=-]\s*(\d+)\b", text)
     m_s = re.search(r"(?mi)^\s*SURVIVED\s*[:=-]\s*(\d+)\b", text)
     if m_k and m_s:
         try:
-            killed = int(m_k.group(1))
-            survived = int(m_s.group(1))
-            return killed, survived
+            return int(m_k.group(1)), int(m_s.group(1))
         except Exception:
             pass
 
@@ -176,49 +143,35 @@ def parse_mutatest_stats(output: str) -> Tuple[Optional[int], Optional[int]]:
     m_s2 = re.search(r"(?i)survived\D+(\d+)", text)
     if m_k2 and m_s2:
         try:
-            killed = int(m_k2.group(1))
-            survived = int(m_s2.group(1))
-            return killed, survived
+            return int(m_k2.group(1)), int(m_s2.group(1))
         except Exception:
             pass
 
-    survived_count = len(re.findall(r"(?mi)\bSURVIVED\b", text))
+    # Fallback: count tokens across lines
     killed_count = len(re.findall(r"(?mi)\bKILLED\b", text))
-
-    if survived_count or killed_count:
+    survived_count = len(re.findall(r"(?mi)\bSURVIVED\b", text))
+    if killed_count or survived_count:
         return killed_count, survived_count
 
     return None, None
 
 
 def write_survivors_report(output: str) -> int:
-    """Write a survivors-only report file and return the number of survivors detected."""
     survivors_lines = [ln for ln in output.splitlines() if "SURVIVED" in ln]
     Path("Logs").mkdir(parents=True, exist_ok=True)
-    (Path("Logs") / "mutatest_survivors.txt").write_text(
-        "\n".join(survivors_lines), encoding="utf-8"
-    )
+    (Path("Logs") / "mutatest_survivors.txt").write_text("\n".join(survivors_lines), encoding="utf-8")
     return len(survivors_lines)
 
 
 def enforce_mutation_score(min_required: float) -> None:
-    """Run mutatest, compute score, and enforce thresholds.
-
-    Exits the process with code 0 on success or 1 on failure.
-    """
     stdout, _ = run_mutatest()
 
     killed, survived = parse_mutatest_stats(stdout)
-
     survivors_detected = write_survivors_report(stdout)
 
     if killed is None or survived is None:
-        logging.warning(
-            "[MUTATION] Could not parse exact killed/survived counts from mutatest output."
-        )
-        logging.info(
-            f"[MUTATION] Detected {survivors_detected} survivor lines by fallback scan."
-        )
+        logging.warning("[MUTATION] Could not parse exact killed/survived counts from mutatest output.")
+        logging.info(f"[MUTATION] Detected {survivors_detected} survivor lines by fallback scan.")
         if survivors_detected > 0:
             logging.error("[MUTATION] Surviving mutations found. Failing the gate.")
             sys.exit(1)
@@ -234,21 +187,18 @@ def enforce_mutation_score(min_required: float) -> None:
     )
 
     if killed_percent < min_required:
-        logging.error(
-            f"[MUTATION] Mutation score too low: {killed_percent:.2f}% < {min_required}%"
-        )
+        logging.error(f"[MUTATION] Mutation score too low: {killed_percent:.2f}% < {min_required}%")
         sys.exit(1)
 
     if survived > 0:
-        logging.warning(
-            "[MUTATION] Some mutations survived but score threshold was met. Consider tightening tests."
-        )
+        logging.warning("[MUTATION] Some mutations survived but score threshold was met. Consider tightening tests.")
 
     logging.info("[MUTATION] Threshold satisfied. Gate passed.")
     sys.exit(0)
 
 
 if __name__ == "__main__":
-    if not enforce_min_coverage(MIN_SCORE):
+    cov_min, mut_min = _get_thresholds()
+    if not enforce_min_coverage(cov_min):
         sys.exit(1)
-    enforce_mutation_score(MIN_SCORE)
+    enforce_mutation_score(mut_min)
