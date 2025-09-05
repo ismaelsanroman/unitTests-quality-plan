@@ -12,6 +12,8 @@ Notes for Windows compatibility:
 - All file writes go under a local `Logs/` folder.
 - Output parsing is resilient to small format changes; if exact numbers cannot be parsed, it falls back
   to detecting "SURVIVED" lines and failing accordingly.
+- Plugin isolation: set `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1` so third‑party plugins (e.g., very old
+  hypothesis plugins that pin `coverage<6`) cannot break the run. We explicitly load `pytest-cov`.
 
 Comments are in English and there are no emojis by request.
 """
@@ -40,10 +42,15 @@ def run_pytest_coverage() -> Optional[float]:
     """
     logging.info("[COVERAGE] Running pytest with coverage...")
 
+    # Isolate from third-party plugins that could be incompatible.
+    os.environ["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
+
     cmd = [
         sys.executable,
         "-m",
         "pytest",
+        "-p",
+        "pytest_cov",  # load only pytest-cov explicitly
         "--cov=src",
         "--cov-report=term-missing",
         "--cov-report=html",
@@ -58,18 +65,14 @@ def run_pytest_coverage() -> Optional[float]:
         )
     except subprocess.CalledProcessError as e:
         logging.error("[COVERAGE] Pytest coverage run failed.")
-        # Show captured output to help debugging in CI.
         print(e.stdout or e.stderr or str(e))
         return None
 
     stdout = result.stdout or ""
 
-    # Typical coverage terminal output contains a line with TOTAL ... XX%
-    # We scan for a percentage at the end of the TOTAL line.
     for line in stdout.splitlines():
         if "TOTAL" in line and "%" in line:
             parts = line.strip().split()
-            # The last token normally looks like '85%' or '85.00%'
             token = parts[-1]
             try:
                 percent = float(token.replace("%", ""))
@@ -113,15 +116,12 @@ def run_mutatest() -> Tuple[str, int]:
     """
     logging.info("[MUTATION] Running mutatest...")
 
-    # Many projects expose tests via pytest by default, so we rely on pytest discovery.
-    # `-s src` narrows the mutation targets to the source folder.
-    # If your code lives somewhere else, adjust the -s argument.
-
-    # Optionally allow override via environment variables in CI if needed.
+    # Allow override of source directory via environment variable.
     source_dir = os.environ.get("MUTATION_SOURCE", "src")
 
-    # Keep pytest quiet and fail fast to save cycles.
+    # Keep pytest quiet and fail fast, and isolate from third-party plugins.
     os.environ["PYTEST_ADDOPTS"] = "-q -x --disable-warnings"
+    os.environ["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
 
     cmd = [
         sys.executable,
@@ -136,7 +136,7 @@ def run_mutatest() -> Tuple[str, int]:
             cmd,
             capture_output=True,
             text=True,
-            check=False,  # mutatest can return non-zero; we still want its output.
+            check=False,
         )
     except FileNotFoundError:
         logging.error(
@@ -146,7 +146,6 @@ def run_mutatest() -> Tuple[str, int]:
 
     stdout = (res.stdout or "") + ("\n" + res.stderr if res.stderr else "")
 
-    # Persist full stdout/stderr for later inspection.
     Path("Logs").mkdir(parents=True, exist_ok=True)
     (Path("Logs") / "mutatest_output.txt").write_text(stdout, encoding="utf-8")
 
@@ -156,22 +155,13 @@ def run_mutatest() -> Tuple[str, int]:
 def parse_mutatest_stats(output: str) -> Tuple[Optional[int], Optional[int]]:
     """Attempt to extract killed and survived counts from mutatest output.
 
-    The function tries a couple of patterns to be robust across mutatest versions.
-
-    Returns
-    -------
-    (killed, survived) as integers, or (None, None) if parsing failed.
+    Returns (killed, survived) as integers, or (None, None) if parsing failed.
     """
     text = output
 
-    # Common summary snippets may include lines like:
-    #   "KILLED: 12"
-    #   "SURVIVED: 3"
-    # or lines with categories and counts separated by colons or hyphens.
     killed = None
     survived = None
 
-    # Pattern 1: Standalone KILLED/SURVIVED key-value pairs
     m_k = re.search(r"(?mi)^\s*KILLED\s*[:=-]\s*(\d+)\b", text)
     m_s = re.search(r"(?mi)^\s*SURVIVED\s*[:=-]\s*(\d+)\b", text)
     if m_k and m_s:
@@ -182,7 +172,6 @@ def parse_mutatest_stats(output: str) -> Tuple[Optional[int], Optional[int]]:
         except Exception:
             pass
 
-    # Pattern 2: Count tokens anywhere (less strict), first match wins
     m_k2 = re.search(r"(?i)killed\D+(\d+)", text)
     m_s2 = re.search(r"(?i)survived\D+(\d+)", text)
     if m_k2 and m_s2:
@@ -193,12 +182,9 @@ def parse_mutatest_stats(output: str) -> Tuple[Optional[int], Optional[int]]:
         except Exception:
             pass
 
-    # Pattern 3: Fallback by counting label occurrences per test result lines
-    # Many per-case lines contain the words KILLED or SURVIVED. We count them.
     survived_count = len(re.findall(r"(?mi)\bSURVIVED\b", text))
     killed_count = len(re.findall(r"(?mi)\bKILLED\b", text))
 
-    # If at least one of these is non-zero, assume these counts are usable.
     if survived_count or killed_count:
         return killed_count, survived_count
 
@@ -206,10 +192,7 @@ def parse_mutatest_stats(output: str) -> Tuple[Optional[int], Optional[int]]:
 
 
 def write_survivors_report(output: str) -> int:
-    """Write a survivors-only report file and return the number of survivors detected.
-
-    This filters lines that contain the word SURVIVED to create a concise report.
-    """
+    """Write a survivors-only report file and return the number of survivors detected."""
     survivors_lines = [ln for ln in output.splitlines() if "SURVIVED" in ln]
     Path("Logs").mkdir(parents=True, exist_ok=True)
     (Path("Logs") / "mutatest_survivors.txt").write_text(
@@ -227,7 +210,6 @@ def enforce_mutation_score(min_required: float) -> None:
 
     killed, survived = parse_mutatest_stats(stdout)
 
-    # Always emit a survivors report to aid triage.
     survivors_detected = write_survivors_report(stdout)
 
     if killed is None or survived is None:
@@ -243,7 +225,6 @@ def enforce_mutation_score(min_required: float) -> None:
         logging.info("[MUTATION] No survivors detected by fallback scan.")
         sys.exit(0)
 
-    # Compute mutation score (killed / (killed + survived) * 100)
     killable = killed + survived
     killed_percent = (killed / killable) * 100 if killable > 0 else 0.0
 
