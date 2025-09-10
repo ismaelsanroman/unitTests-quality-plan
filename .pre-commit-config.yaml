@@ -38,7 +38,7 @@ repos:
         always_run: true
 
       - id: mutation-testing
-        name: mutation testing (mutmut)
+        name: mutation testing
         language: python
         language_version: python3
         additional_dependencies:
@@ -50,8 +50,12 @@ repos:
 
       - id: coverage_check
         name: pytest coverage check
-        entry: python -m pytest --cov=src --cov-report=term-missing --cov-report=html
-        language: system
+        language: python
+        language_version: python3
+        additional_dependencies:
+          - pytest==8.3.5
+          - pytest-cov==6.0.0
+        entry: pytest --cov=src --cov-report=term-missing --cov-report=html --cov-fail-under=80
         types: [ python ]
         pass_filenames: false
         always_run: true
